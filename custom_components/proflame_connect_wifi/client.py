@@ -99,6 +99,12 @@ class ProflameClient(ProflameClientBase):
         return self.get_state(ApiAttrs.PILOT_MODE)
 
     @property
+    def split_flow(self) -> bool | None:
+        """Get whether split flow burner mode is enabled."""
+        split_flow = self.get_state(ApiAttrs.SPLIT_FLOW)
+        return None if split_flow is None else bool(split_flow)
+
+    @property
     def preset(self) -> Preset | None:
         """Get the current state of the fireplace as represented by a preset."""
         cur_mode = self.operating_mode
@@ -212,3 +218,11 @@ class ProflameClient(ProflameClientBase):
     def turn_on_light(self):
         """Set primary light to last active brightness."""
         self.set_light_brightness(self._stored_light_brightness)
+
+    def turn_off_split_flow(self):
+        """Disable split flow burner mode."""
+        self.set_state(ApiAttrs.SPLIT_FLOW, 0)
+
+    def turn_on_split_flow(self):
+        """Enable split flow burner mode."""
+        self.set_state(ApiAttrs.SPLIT_FLOW, 1)

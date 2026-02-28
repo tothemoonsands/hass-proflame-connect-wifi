@@ -51,3 +51,24 @@ def test_tracking_state(client):
 
     client._track_state(ApiAttrs.FAN_SPEED, 0)
     assert client._stored_fan_speed == 3  # Should not update on 0
+
+
+def test_split_flow_state_property(client):
+    """Test split flow property mapping from raw state to bool."""
+    client._state[ApiAttrs.SPLIT_FLOW] = 1
+    assert client.split_flow is True
+
+    client._state[ApiAttrs.SPLIT_FLOW] = 0
+    assert client.split_flow is False
+
+    client._state.pop(ApiAttrs.SPLIT_FLOW)
+    assert client.split_flow is None
+
+
+def test_split_flow_toggle(client):
+    """Test split flow toggle methods write expected state."""
+    client.turn_on_split_flow()
+    client._queue.put_nowait.assert_called_with({ApiAttrs.SPLIT_FLOW: 1})
+
+    client.turn_off_split_flow()
+    client._queue.put_nowait.assert_called_with({ApiAttrs.SPLIT_FLOW: 0})
