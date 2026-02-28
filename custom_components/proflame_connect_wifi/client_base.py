@@ -5,7 +5,7 @@ from json.decoder import JSONDecodeError
 import logging
 
 from websockets import ConnectionClosed, ConnectionClosedError
-from websockets.client import connect
+from websockets.asyncio.client import connect
 
 from .const import DEFAULT_PORT, ApiControl
 
