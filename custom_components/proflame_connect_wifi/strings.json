@@ -49,6 +49,9 @@
     "switch": {
       "fireplace": {
         "name": "Fireplace"
+      },
+      "split_flow": {
+        "name": "Split flow burner"
       }
     }
   }
