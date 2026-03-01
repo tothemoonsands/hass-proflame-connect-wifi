@@ -109,6 +109,11 @@ class ProflameClientBase:
                 item = None
             except asyncio.CancelledError:
                 break
+            except ConnectionClosed:
+                if item is not None:
+                    self._queue.put_nowait(item)
+                self._debug('Dispatcher paused while websocket is closed')
+                break
             except Exception: # pylint: disable=broad-exception-caught
                 self._exception('Unexpected error during send')
                 await asyncio.sleep(1)
@@ -151,6 +156,9 @@ class ProflameClientBase:
                 await self._send(ApiControl.PING)
             except asyncio.CancelledError:
                 break
+            except ConnectionClosed:
+                self._debug('Keepalive stopped while websocket is closed')
+                break
             except Exception: # pylint: disable=broad-exception-caught
                 self._exception('Unexpected error during ping')
                 await asyncio.sleep(1)
@@ -163,6 +171,9 @@ class ProflameClientBase:
                     self._debug('RECV: %s', message)
                     self._handle_message(message)
             except asyncio.CancelledError:
+                break
+            except ConnectionClosed:
+                self._debug('Listener stopped while websocket is closed')
                 break
             except Exception: # pylint: disable=broad-exception-caught
                 self._exception('Unexpected error during receive')
