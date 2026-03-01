@@ -26,12 +26,16 @@ class ProflameClientBase:
                 response = await ws.recv()
 
                 if response == ApiControl.CONN_ACK:
-                    _LOGGER.debug("Proflame connection to '%s' established")
+                    _LOGGER.debug("Proflame connection to '%s' established", uri)
                     return True
                 else:
                     msg = "Proflame connection test to '%s' failed with unexpected response (%s)"
                     _LOGGER.error(msg, uri, response)
                     return False
+        except (OSError, asyncio.TimeoutError) as err:
+            msg = "Proflame connection test to '%s' unavailable: %s"
+            _LOGGER.debug(msg, uri, err)
+            return False
         except Exception: # pylint: disable=broad-exception-caught
             msg = "Encountered error while testing Proflame connection '%s'"
             _LOGGER.exception(msg, uri)

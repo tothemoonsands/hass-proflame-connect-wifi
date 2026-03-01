@@ -67,3 +67,46 @@ async def test_dispatcher_requeues_message_when_connection_closes():
     client._exception.assert_not_called()
     assert client._queue.qsize() == 1
     assert client._queue.get_nowait() == message
+
+
+@pytest.mark.asyncio
+async def test_test_connection_returns_false_on_connection_refused(monkeypatch):
+    """Connection failures during validation should return False without exceptions."""
+
+    def _raise_oserror(_uri):
+        raise ConnectionRefusedError("connect failed")
+
+    monkeypatch.setattr(
+        "custom_components.proflame_connect_wifi.client_base.connect",
+        _raise_oserror,
+    )
+
+    assert await ProflameClientBase.test_connection("192.168.1.114", 88) is False
+
+
+@pytest.mark.asyncio
+async def test_test_connection_connection_refused_logs_debug(monkeypatch):
+    """Refused sockets during probe should log as debug, not warning/exception."""
+
+    def _raise_oserror(_uri):
+        raise ConnectionRefusedError("connect failed")
+
+    debug_mock = MagicMock()
+    warning_mock = MagicMock()
+
+    monkeypatch.setattr(
+        "custom_components.proflame_connect_wifi.client_base.connect",
+        _raise_oserror,
+    )
+    monkeypatch.setattr(
+        "custom_components.proflame_connect_wifi.client_base._LOGGER.debug",
+        debug_mock,
+    )
+    monkeypatch.setattr(
+        "custom_components.proflame_connect_wifi.client_base._LOGGER.warning",
+        warning_mock,
+    )
+
+    assert await ProflameClientBase.test_connection("192.168.1.114", 88) is False
+    debug_mock.assert_called_once()
+    warning_mock.assert_not_called()
