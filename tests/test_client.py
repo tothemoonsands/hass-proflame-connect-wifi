@@ -15,6 +15,7 @@ def client():
     client = ProflameClient("device_id", "127.0.0.1")
     # Mock the queue to verify set_state calls
     client._queue = MagicMock()
+    client._connected = True
     # Populate some initial state
     client._state = {
         ApiAttrs.OPERATING_MODE: OperatingMode.MANUAL,
@@ -72,3 +73,20 @@ def test_split_flow_toggle(client):
 
     client.turn_off_split_flow()
     client._queue.put_nowait.assert_called_with({ApiAttrs.SPLIT_FLOW: 0})
+
+
+def test_unknown_climate_state_is_not_heating_or_celsius():
+    """Unknown mode/flame/unit cannot invent heating or encode a setpoint."""
+    client = ProflameClient("device_id", "127.0.0.1")
+    assert client.hvac_action is None
+    assert client.hvac_mode is None
+    assert client.temperature_unit is None
+    client._state[ApiAttrs.OPERATING_MODE] = OperatingMode.MANUAL
+    assert client.hvac_action is None
+    assert client.hvac_mode is None
+
+
+def test_zero_room_temperature_is_known(client):
+    """A valid zero reading is not treated as missing state."""
+    client._state[ApiAttrs.CURRENT_TEMPERATURE] = 0
+    assert client.current_temperature == 0

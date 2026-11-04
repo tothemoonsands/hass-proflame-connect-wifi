@@ -52,7 +52,7 @@ class ProflameClient(ProflameClientBase):
     def current_temperature(self) -> float | None:
         """Get the current temperature reported by the unit."""
         temperature = self.get_state(ApiAttrs.CURRENT_TEMPERATURE)
-        if temperature:
+        if temperature is not None:
             return temperature / 10
         return None
 
@@ -73,6 +73,8 @@ class ProflameClient(ProflameClientBase):
     @property
     def hvac_action(self) -> HVACAction | None:
         """Get the current HVAC heating status."""
+        if self.preset is None:
+            return None
         if self.preset == Preset.OFF:
             return HVACAction.OFF
         return HVACAction.HEATING
@@ -80,6 +82,8 @@ class ProflameClient(ProflameClientBase):
     @property
     def hvac_mode(self) -> HVACMode | None:
         """Get the current HVAC heating status."""
+        if self.preset is None:
+            return None
         if self.preset == Preset.OFF:
             return HVACMode.OFF
         return HVACMode.HEAT
@@ -108,6 +112,8 @@ class ProflameClient(ProflameClientBase):
     @property
     def preset(self) -> Preset | None:
         """Get the current state of the fireplace as represented by a preset."""
+        if self.get_state(ApiAttrs.FLAME_HEIGHT) is None:
+            return None
         cur_mode = self.operating_mode
         if cur_mode == OperatingMode.OFF:
             return Preset.OFF
@@ -131,12 +137,14 @@ class ProflameClient(ProflameClientBase):
         return None
 
     @property
-    def temperature_unit(self) -> UnitOfTemperature:
+    def temperature_unit(self) -> UnitOfTemperature | None:
         """The temperature unit the device is configured for."""
-        unit = self.get_state(ApiAttrs.TEMPERATURE_UNIT) or 0
+        unit = self.get_state(ApiAttrs.TEMPERATURE_UNIT)
         if unit == 0:
             return UnitOfTemperature.CELSIUS
-        return UnitOfTemperature.FAHRENHEIT
+        if unit == 1:
+            return UnitOfTemperature.FAHRENHEIT
+        return None
 
     def heat(self) -> None:
         """Set the fireplace to the last heat generating configuration."""

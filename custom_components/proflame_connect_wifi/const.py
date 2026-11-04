@@ -62,6 +62,22 @@ DEFAULT_DEVICE = 'Proflame Fireplace'
 DEFAULT_NAME = 'Fireplace'
 DEFAULT_PORT = 88
 
+# Seconds allowed for the websocket handshake to complete.
+CONNECT_TIMEOUT = 10
+# Bounds for protocol startup, individual sends, and socket teardown.
+HANDSHAKE_TIMEOUT = 10
+SEND_TIMEOUT = 5
+CLOSE_TIMEOUT = 5
+# Seconds between PROFLAMEPING keepalive messages.
+KEEPALIVE_INTERVAL = 5
+# Seconds without any message from the fireplace before the connection is
+# considered dead and reopened. The fireplace answers every ping within
+# well under a second, so this tolerates several missed pongs.
+KEEPALIVE_TIMEOUT = 30
+# Reconnect backoff bounds in seconds.
+RECONNECT_MIN_DELAY = 1
+RECONNECT_MAX_DELAY = 60
+
 PROFLAME_CLIENT = "client"
 PROFLAME_COORDINATOR = "coordinator"
 
@@ -81,3 +97,16 @@ MIN_LIGHT_BRIGHTNESS = 0
 
 MAX_TEMPERATURE: Temperature = Temperature.celcius(35)
 MIN_TEMPERATURE: Temperature = Temperature.celcius(5)
+
+# Every platform is enabled unconditionally. These fields form the required
+# control baseline; split_flow is optional. None means an integer in tenths of a degree.
+REQUIRED_STATE_RANGES = {
+    ApiAttrs.OPERATING_MODE: (OperatingMode.OFF, OperatingMode.SMART),
+    ApiAttrs.FLAME_HEIGHT: (MIN_FLAME_HEIGHT, MAX_FLAME_HEIGHT),
+    ApiAttrs.FAN_SPEED: (MIN_FAN_SPEED, MAX_FAN_SPEED),
+    ApiAttrs.LIGHT_BRIGHTNESS: (MIN_LIGHT_BRIGHTNESS, MAX_LIGHT_BRIGHTNESS),
+    ApiAttrs.PILOT_MODE: (PilotMode.INTERMITENT, PilotMode.CONTINUOUS),
+    ApiAttrs.TEMPERATURE_UNIT: (0, 1),
+    ApiAttrs.CURRENT_TEMPERATURE: None,
+    ApiAttrs.TARGET_TEMPERATURE: None,
+}

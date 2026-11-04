@@ -25,6 +25,7 @@ class ProflameDataCoordinator(DataUpdateCoordinator):
         self.client = client
         self.async_set_updated_data(self.client.full_state)
         self.client.register_callback(self.handle_state_change)
+        self.client.register_connection_callback(self.handle_connection_change)
         self.device_name = name
         self.unique_id = re.sub('[^A-Za-z0-9]+', '', client.device_id)
         self.device_info = DeviceInfo(
@@ -36,9 +37,8 @@ class ProflameDataCoordinator(DataUpdateCoordinator):
 
     def handle_state_change(self, key: str, value: int) -> None:
         """Pass new data to the underlying coordinator."""
-        self.async_set_updated_data(
-            data={
-                **self.data,
-                key: value,
-            }
-        )
+        self.async_set_updated_data(self.client.full_state)
+
+    def handle_connection_change(self, connected: bool) -> None:
+        """Refresh entities so their availability follows the connection."""
+        self.async_update_listeners()

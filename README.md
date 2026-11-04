@@ -34,6 +34,67 @@ Platform | Description
 
 <!---->
 
+## Connection recovery
+
+The integration reconnects automatically after a WebSocket close, network error,
+or 30 seconds without incoming traffic. Retries back off from 1 to 60 seconds;
+a successful Proflame handshake and fresh state reset the backoff. WebSocket
+opening and protocol startup each have a 10-second timeout; sends and graceful
+socket teardown each have a 5-second timeout.
+
+Entities remain unavailable until the fireplace acknowledges the protocol and
+reports a complete, valid control-state baseline on the current connection.
+Partial JSON messages accumulate within the 10-second protocol-startup deadline;
+firmware metadata and pongs do not satisfy or extend that deadline. State
+callbacks are published only after the entire baseline and acknowledgement have
+arrived, so consumers never receive a partially initialized baseline.
+
+The platforms are created unconditionally. Their required baseline is:
+
+| Protocol field | Required value | Used by |
+| --- | --- | --- |
+| `main_mode` | Integer 0–3 | Climate mode/preset, power, fan, flame |
+| `flame_control` | Integer 0–6 | Flame level, climate preset, restored flame |
+| `fan_control` | Integer 0–6 | Fan level and restoration |
+| `lamp_control` | Integer 0–6 | Light brightness and restoration |
+| `pilot_mode` | Integer 0–1 | Pilot selector |
+| `temperature_unit` | Integer 0 (Celsius) or 1 (Fahrenheit) | Temperature display and command encoding |
+| `room_temperature` | Integer, tenths of the reported unit | Climate current temperature |
+| `temperature_set` | Integer 50–350 (Celsius) or 410–950 (Fahrenheit) | Climate target temperature |
+
+Booleans, numeric strings, floats, nulls, and out-of-range control values do not
+qualify. Invalid startup fields must be replaced by valid values before the
+deadline. Invalid required state received after readiness disconnects the client
+and starts recovery. Missing protocol temperature units are never assumed to be
+Celsius when encoding commands.
+
+Home Assistant needs a valid climate presentation unit even while unavailable
+to convert capability attributes such as minimum and maximum temperature. Before
+the first ready baseline, the entity uses HA's configured temperature unit; after
+readiness, it retains the last valid device unit across disconnects. This display
+fallback never enables commands: temperature commands require availability and
+use only the client's validated protocol unit.
+
+These requirements follow this integration's existing enums, control limits,
+and entity dependencies. Tests use synthetic messages plus the hardware snapshot
+reported during review on 2026-11-04: mode 0, unit 1, lamp 0, pilot 0, flame 1,
+fan 1, setpoint 690, and room temperature 720. That snapshot passes readiness and
+HA state-writing regression tests; it is recorded as reported fields, not a raw
+WebSocket capture. There is no capability negotiation: firmware that omits a required field
+(even when a particular HA entity is disabled), uses different ranges or units,
+or reports an unset target such as zero will remain unavailable and retry. Target
+limits match the integration's supported 5–35 °C / 41–95 °F setpoints even while
+off. No undocumented range is imposed on the room-temperature sensor beyond
+requiring an integer. `fw_revision`, `burner_status`, `remote_control`,
+`auxiliary_out`, and `split_flow` aren't required for readiness. The optional
+split-flow control remains supported when the device reports it. Readiness does not establish actual burner activity; the existing
+climate heating indication is inferred from mode/preset, not `burner_status`.
+
+Entities become unavailable when connection loss is detected,
+before socket cleanup completes. Commands issued while unavailable and unsent
+queued commands are dropped rather than replayed after reconnection. Already
+transmitted commands cannot be recalled or confirmed by this recovery mechanism.
+
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)

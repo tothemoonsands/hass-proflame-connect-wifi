@@ -32,9 +32,12 @@ async def async_setup_entry(
 ) -> None:
     """Create the number for Proflame fireplaces."""
     entry_id = config_entry.entry_id
-    coordinator: ProflameDataCoordinator = hass.data[DOMAIN][entry_id][PROFLAME_COORDINATOR]
+    coordinator: ProflameDataCoordinator = hass.data[DOMAIN][entry_id][
+        PROFLAME_COORDINATOR
+    ]
     climate = ProflameClimate(coordinator)
     async_add_entities([climate])
+
 
 class ProflameClimate(ProflameEntity, ClimateEntity):
     """Creates a device to control fireplace lights."""
@@ -43,24 +46,26 @@ class ProflameClimate(ProflameEntity, ClimateEntity):
         HVACMode.HEAT,
         HVACMode.OFF,
     ]
-    _attr_preset_modes = [
-        'Off',
-        'Manual',
-        'Thermostat',
-        'Smart'
-    ]
+    _attr_preset_modes = ["Off", "Manual", "Thermostat", "Smart"]
     _attr_supported_features = (
-        ClimateEntityFeature.PRESET_MODE |
-        ClimateEntityFeature.TARGET_TEMPERATURE
+        ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TARGET_TEMPERATURE
     )
     _attr_target_temperature_step = 1.0
 
     def __init__(self, coordinator: ProflameDataCoordinator) -> None:
         """Create new instance of the ProflameFlame class."""
-        super().__init__(coordinator, ClimateEntityDescription(
-            key='climate',
-            translation_key='climate',
-        ))
+        super().__init__(
+            coordinator,
+            ClimateEntityDescription(
+                key="climate",
+                translation_key="climate",
+            ),
+        )
+        # HA converts capability attributes even while unavailable. Keep a valid
+        # presentation unit without inventing a device/protocol unit.
+        self._presentation_temperature_unit = (
+            coordinator.hass.config.units.temperature_unit
+        )
 
     @property
     def current_temperature(self) -> float | None:
@@ -80,14 +85,14 @@ class ProflameClimate(ProflameEntity, ClimateEntity):
     @property
     def max_temp(self) -> float:
         """Return the maximum temperature."""
-        if self._device.temperature_unit == UnitOfTemperature.FAHRENHEIT:
+        if self.temperature_unit == UnitOfTemperature.FAHRENHEIT:
             return MAX_TEMPERATURE.to_fahrenheit()
         return MAX_TEMPERATURE.to_celcius()
 
     @property
     def min_temp(self) -> float:
         """Return the minimum temperature."""
-        if self._device.temperature_unit == UnitOfTemperature.FAHRENHEIT:
+        if self.temperature_unit == UnitOfTemperature.FAHRENHEIT:
             return MIN_TEMPERATURE.to_fahrenheit()
         return MIN_TEMPERATURE.to_celcius()
 
@@ -103,17 +108,25 @@ class ProflameClimate(ProflameEntity, ClimateEntity):
 
     @property
     def temperature_unit(self) -> str:
-        """Return the unit of measurement used by the platform."""
-        return self._device.temperature_unit
+        """Use the last ready device unit, initially HA's configured unit."""
+        unit = self._device.temperature_unit
+        if self._device.connected and unit in (
+            UnitOfTemperature.CELSIUS,
+            UnitOfTemperature.FAHRENHEIT,
+        ):
+            self._presentation_temperature_unit = unit
+        return self._presentation_temperature_unit
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
-        temperature = kwargs.get('temperature', None)
-        if temperature is None or self.temperature_unit is None:
+        temperature = kwargs.get("temperature", None)
+        if temperature is None or not self.available:
             return
-        if self.temperature_unit == UnitOfTemperature.CELSIUS:
+        # Presentation fallbacks must never select protocol command encoding.
+        unit = self._device.temperature_unit
+        if unit == UnitOfTemperature.CELSIUS:
             self._device.set_target_temperature(Temperature.celcius(temperature))
-        if self.temperature_unit == UnitOfTemperature.FAHRENHEIT:
+        if unit == UnitOfTemperature.FAHRENHEIT:
             self._device.set_target_temperature(Temperature.fahrenheit(temperature))
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
@@ -125,11 +138,11 @@ class ProflameClimate(ProflameEntity, ClimateEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
-        if preset_mode == 'Off':
+        if preset_mode == "Off":
             self._device.set_preset(Preset.OFF)
-        if preset_mode == 'Manual':
+        if preset_mode == "Manual":
             self._device.set_preset(Preset.MANUAL)
-        if preset_mode == 'Thermostat':
+        if preset_mode == "Thermostat":
             self._device.set_preset(Preset.THERMOSTAT)
-        if preset_mode == 'Smart':
+        if preset_mode == "Smart":
             self._device.set_preset(Preset.SMART)
