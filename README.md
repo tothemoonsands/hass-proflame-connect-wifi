@@ -34,6 +34,11 @@ Platform | Description
 
 <!---->
 
+## Home Assistant compatibility
+
+Temperature units use Home Assistant's shared constants, so startup does not
+depend on the climate component re-exporting `UnitOfTemperature`.
+
 ## Connection recovery
 
 The integration reconnects automatically after a WebSocket close, network error,
